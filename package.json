@@ -1,0 +1,46 @@
+{
+  "name": "js-blockstore-encrypt",
+  "version": "1.0.0",
+  "main": "dist/index.min.js",
+  "license": "MIT",
+  "type": "module",
+  "author": "dozyio",
+  "types": "./dist/src/index.d.ts",
+  "files": [
+    "src",
+    "dist",
+    "!dist/test",
+    "!**/*.tsbuildinfo",
+    "!.gitignore",
+    "!.prettierignore"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "import": "./dist/src/index.js"
+    }
+  },
+  "eslintConfig": {
+    "extends": "ipfs",
+    "parserOptions": {
+      "project": true,
+      "sourceType": "module"
+    }
+  },
+  "dependencies": {
+    "it-map": "^3.1.1",
+    "it-parallel-batch": "^3.0.6",
+    "multiformats": "^13.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.5.5",
+    "aegir": "^44.1.1",
+    "interface-blockstore": "^5.3.1",
+    "interface-store": "^6.0.2",
+    "vitest": "^2.1.1"
+  },
+  "scripts": {
+    "build": "aegir build",
+    "test": "vitest run --hideSkippedTests --allowOnly"
+  }
+}
