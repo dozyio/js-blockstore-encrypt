@@ -35,12 +35,15 @@
   "devDependencies": {
     "@types/node": "^22.5.5",
     "aegir": "^44.1.1",
+    "blockstore-fs": "^2.0.2",
     "interface-blockstore": "^5.3.1",
     "interface-store": "^6.0.2",
     "vitest": "^2.1.1"
   },
   "scripts": {
     "build": "aegir build",
-    "test": "vitest run --hideSkippedTests --allowOnly"
+    "test": "vitest run --hideSkippedTests --allowOnly",
+    "test:bench": "vitest bench --maxConcurrency 1",
+    "lint": "aegir lint --fix"
   }
 }

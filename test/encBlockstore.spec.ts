@@ -4,8 +4,8 @@ import { CID } from 'multiformats/cid'
 import * as raw from 'multiformats/codecs/raw'
 import { sha256 } from 'multiformats/hashes/sha2'
 import { describe, it, expect, beforeEach } from 'vitest'
-import { MockBlockstore } from '../__mocks__/MockBlockstore'
 import { EncBlockstore, type EncBlockstoreInit } from '../src/'
+import { MockBlockstore } from './__mocks__/MockBlockstore'
 
 /**
  * Generates a random CID using SHA-256 and the 'raw' codec.
@@ -155,6 +155,7 @@ describe('EncBlockstore', () => {
   it('should retrieve all blocks using getAll correctly', async () => {
     // Since getAll is not supported, expect it to throw an error
     await expect(async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       for await (const _ of encStore.getAll()) {
         // No-op
       }
