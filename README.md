@@ -1,6 +1,6 @@
-# js-blockstore-encrypt aka blockstore-enc
+# blockstore-enc
 
-A transparent encrypted wrapper around any existing Blockstore implementation.
+A JS/TS transparent encrypted wrapper around any existing Blockstore implementation.
 
 ## Features
 
