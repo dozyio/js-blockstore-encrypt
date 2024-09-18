@@ -1,28 +1,46 @@
+// EncBlockstore.test.ts
+
 import { CID } from 'multiformats/cid'
+import * as raw from 'multiformats/codecs/raw'
 import { sha256 } from 'multiformats/hashes/sha2'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { MockBlockstore } from '../__mocks__/MockBlockstore'
-import { EncBlockstore, EncBlockstoreInit } from '../src/'
+import { EncBlockstore, type EncBlockstoreInit } from '../src/'
 
-async function generateCID (data: Uint8Array): Promise<CID> {
-  const hash = await sha256.digest(data)
-  return CID.create(1, 0x55, hash) // 0x55 is the codec for 'raw'
+/**
+ * Generates a random CID using SHA-256 and the 'raw' codec.
+ *
+ * @returns A randomly generated CID.
+ */
+async function generateRandomCID (): Promise<CID> {
+  const randomData = globalThis.crypto.getRandomValues(new Uint8Array(32))
+  const hash = await sha256.digest(randomData)
+  return CID.createV1(raw.code, hash)
 }
 
 describe('EncBlockstore', () => {
   let mockStore: MockBlockstore
   let encStore: EncBlockstore
+
   const password = 'test-password'
+  const masterSalt = globalThis.crypto.getRandomValues(new Uint8Array(16)) // 128-bit salt
 
   beforeEach(async () => {
     mockStore = new MockBlockstore()
-    encStore = new EncBlockstore(mockStore)
-    await encStore.init(password)
+    const init: EncBlockstoreInit = {
+      pbkdf2Iterations: 210000,
+      pbkdf2hash: 'SHA-512',
+      putManyConcurrency: 50,
+      getManyConcurrency: 50,
+      deleteManyConcurrency: 50
+    }
+    encStore = new EncBlockstore(mockStore, init)
+    await encStore.init(password, masterSalt)
   })
 
   it('should put and get a single block correctly', async () => {
     const originalData = new TextEncoder().encode('Hello, World!')
-    const cid = CID.parse('bafkreigh2akiscaildcxxl6oj4u34k26rk7jvl54b3sxxmxewx4s7ee73a')
+    const cid = await generateRandomCID() // Generate a random CID
 
     await encStore.put(cid, originalData)
 
@@ -37,7 +55,7 @@ describe('EncBlockstore', () => {
     // Generate multiple CIDs and data
     for (let i = 0; i < 10; i++) {
       const data = new TextEncoder().encode(`Data block ${i}`)
-      const cid = await generateCID(data)
+      const cid = await generateRandomCID() // Generate a random CID
       cids.push(cid)
       dataMap.set(cid.toString(), data)
     }
@@ -58,7 +76,7 @@ describe('EncBlockstore', () => {
 
   it('should delete a block correctly', async () => {
     const data = new TextEncoder().encode('Block to delete')
-    const cid = CID.parse('bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku')
+    const cid = await generateRandomCID() // Generate a random CID
 
     await encStore.put(cid, data)
     expect(await encStore.has(cid)).toBe(true)
@@ -75,13 +93,13 @@ describe('EncBlockstore', () => {
     // Create multiple blocks
     for (let i = 0; i < 20; i++) {
       const data = new TextEncoder().encode(`Bulk data ${i}`)
-      const cid = await generateCID(data)
+      const cid = await generateRandomCID() // Generate a random CID
       blocks.push({ cid, block: data })
     }
 
     // Put many blocks
     const putCids: CID[] = []
-    for await (const cid of encStore.putMany(blocks)) {
+    for await (const cid of encStore.putMany(blocks.map(b => ({ cid: b.cid, block: b.block })))) {
       putCids.push(cid)
     }
 
@@ -97,7 +115,7 @@ describe('EncBlockstore', () => {
 
     // Verify all blocks
     for (let i = 0; i < blocks.length; i++) {
-      expect(getPairs[i].cid.toString()).toBe(blocks[i].cid.toString())
+      expect(getPairs[i].cid.toString()).toBe(putCids[i].toString())
       expect(getPairs[i].block).toEqual(blocks[i].block)
     }
   })
@@ -108,7 +126,7 @@ describe('EncBlockstore', () => {
     // Create multiple blocks
     for (let i = 0; i < 10; i++) {
       const data = new TextEncoder().encode(`Delete data ${i}`)
-      const cid = await generateCID(data)
+      const cid = await generateRandomCID() // Generate a random CID
       blocks.push({ cid, block: data })
     }
 
@@ -135,39 +153,17 @@ describe('EncBlockstore', () => {
   })
 
   it('should retrieve all blocks using getAll correctly', async () => {
-    const blocks: Array<{ cid: CID, block: Uint8Array }> = []
-
-    // Create multiple blocks
-    for (let i = 0; i < 15; i++) {
-      const data = new TextEncoder().encode(`GetAll data ${i}`)
-      const cid = await generateCID(data)
-      blocks.push({ cid, block: data })
-    }
-
-    // Put all blocks
-    for (const { cid, block } of blocks) {
-      await encStore.put(cid, block)
-    }
-
-    // Retrieve all blocks
-    const retrievedBlocks: Array<{ cid: CID, block: Uint8Array }> = []
-    for await (const pair of encStore.getAll()) {
-      retrievedBlocks.push(pair)
-    }
-
-    expect(retrievedBlocks.length).toBe(blocks.length)
-
-    // Verify all blocks
-    for (const { cid, block } of blocks) {
-      const found = retrievedBlocks.find((pair) => pair.cid.toString() === cid.toString())
-      expect(found).toBeDefined()
-      expect(found?.block).toEqual(block)
-    }
+    // Since getAll is not supported, expect it to throw an error
+    await expect(async () => {
+      for await (const _ of encStore.getAll()) {
+        // No-op
+      }
+    }).rejects.toThrow('not supported')
   })
 
   it('should correctly report the existence of a key with has()', async () => {
     const data = new TextEncoder().encode('Existence check')
-    const cid = CID.parse('bafkreigh2akiscaildcxxl6oj4u34k26rk7jvl54b3sxxmxewx4s7ee73a')
+    const cid = await generateRandomCID() // Generate a random CID
 
     expect(await encStore.has(cid)).toBe(false)
 
@@ -176,19 +172,22 @@ describe('EncBlockstore', () => {
   })
 
   it('should throw an error when getting a non-existent key', async () => {
-    const cid = CID.parse('bafkreigh2akiscaildcxxl6oj4u34k26rk7jvl54b3sxxmxewx4s7ee73a')
+    const cid = await generateRandomCID() // Generate a random CID
 
     await expect(encStore.get(cid)).rejects.toThrow('Key not found')
   })
 
   it('should handle encryption and decryption correctly', async () => {
     const data = new TextEncoder().encode('Sensitive Data')
-    const cid = CID.parse('bafkreihdwdcefgh4dqkjv67uzcmw7ojee6xedzdetojuzjevtenxquvyku')
+    const cid = await generateRandomCID() // Generate a random CID
 
     await encStore.put(cid, data)
 
+    // Compute the storage CID
+    const storageCID = await encStore.computeStorageCID(cid)
+
     // Directly access the underlying store to ensure data is encrypted
-    const storedData = await mockStore.get(cid)
+    const storedData = await mockStore.get(storageCID)
     expect(storedData).not.toEqual(data) // Encrypted data should differ
 
     // Decrypt and verify
@@ -198,16 +197,18 @@ describe('EncBlockstore', () => {
 
   it('should handle incorrect password decryption attempts gracefully', async () => {
     const data = new TextEncoder().encode('Another Sensitive Data')
-    const cid = await generateCID(data)
+    const cid = await generateRandomCID() // Generate a random CID
 
     await encStore.put(cid, data)
 
-    // Create a new EncBlockstore with a different password but the same underlying blockstore
+    // Create a new EncBlockstore with a different master salt and password but the same underlying blockstore
+    const wrongMasterSalt = globalThis.crypto.getRandomValues(new Uint8Array(16)) // Different master salt
+    const wrongPassword = 'wrong-password'
 
     const wrongPasswordStore = new EncBlockstore(mockStore)
-    await wrongPasswordStore.init('wrong-password')
+    await wrongPasswordStore.init(wrongPassword, wrongMasterSalt)
 
-    // Attempt to decrypt with the wrong password
-    await expect(wrongPasswordStore.get(cid)).rejects.toThrow()
+    // Attempt to decrypt with the wrong password and master salt
+    await expect(wrongPasswordStore.get(cid)).rejects.toThrow('Key not found')
   })
 })
