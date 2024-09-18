@@ -1,17 +1,18 @@
 /**
  * @packageDocumentation
  *
- * An encrypted blockstore wrapper. CIDs and blocks are encrypted at rest.
+ * EncBlockstore provides a encrypted wrapper around any existing Blockstore implementation.
+ * Ensures that both CIDs and data blocks are encrypted at rest.
  *
  * @example
  *
  * ```js
- * import { EncryptedBlockstore } from 'blockstore-enc'
+ * import { EncBlockstore } from 'blockstore-enc'
  * import { FsBlockstore } from 'blockstore-fs'
  *
  * try {
- *   const password = 'strong-password'
- *   const salt = crypto.getRandomValues(new Uint8Array(16))
+ *   const password = 'strong-password-is-strong' // Must be at least 16 bytes long
+ *   const salt = crypto.getRandomValues(new Uint8Array(16)) // Must be at least 16 bytes long
  *   const store = new EncBlockstore(new FsBlockstore('path/to/store'))
  *   await store.init(password, salt)
  *   await store.open()
@@ -100,9 +101,13 @@ export class EncBlockstore implements Blockstore {
    * Initializes the encryption and MAC keys. Must be called before using the blockstore.
    *
    * @param password - The password to derive the master key from.
-   * @param masterSalt - The master salt provided by the user for key derivation.
+   * @param masterSalt - The master salt used for key derivation.
    */
   public async init (password: string, masterSalt: Uint8Array): Promise<void> {
+    if (password.length < 16) {
+      throw new Error('password must be provided and at least 16 bytes long')
+    }
+
     if (masterSalt.length < 16) {
       throw new Error('Master salt must be provided and at least 16 bytes long')
     }
@@ -408,10 +413,6 @@ export class EncBlockstore implements Blockstore {
     await this.blockstore.delete(storageCID)
   }
 
-  // async delete (key: CID): Promise<void> {
-  //   return this.blockstore.delete(key)
-  // }
-
   async * deleteMany (source: AwaitIterable<CID>): AsyncIterable<CID> {
     yield * parallelBatch(
       map(source, key => {
@@ -436,7 +437,6 @@ export class EncBlockstore implements Blockstore {
       throw new Error('blockstore not initialized')
     }
 
-    // Compute storage CID
     const storageCID = await this.computeStorageCID(key)
 
     return this.blockstore.has(storageCID)

@@ -22,7 +22,7 @@ describe('EncBlockstore', () => {
   let mockStore: MockBlockstore
   let encStore: EncBlockstore
 
-  const password = 'test-password'
+  const password = '🔥strong-password🔥'
   const masterSalt = globalThis.crypto.getRandomValues(new Uint8Array(16)) // 128-bit salt
 
   beforeEach(async () => {
@@ -40,7 +40,7 @@ describe('EncBlockstore', () => {
 
   it('should put and get a single block correctly', async () => {
     const originalData = new TextEncoder().encode('Hello, World!')
-    const cid = await generateRandomCID() // Generate a random CID
+    const cid = await generateRandomCID()
 
     await encStore.put(cid, originalData)
 
@@ -55,7 +55,7 @@ describe('EncBlockstore', () => {
     // Generate multiple CIDs and data
     for (let i = 0; i < 10; i++) {
       const data = new TextEncoder().encode(`Data block ${i}`)
-      const cid = await generateRandomCID() // Generate a random CID
+      const cid = await generateRandomCID()
       cids.push(cid)
       dataMap.set(cid.toString(), data)
     }
@@ -76,7 +76,7 @@ describe('EncBlockstore', () => {
 
   it('should delete a block correctly', async () => {
     const data = new TextEncoder().encode('Block to delete')
-    const cid = await generateRandomCID() // Generate a random CID
+    const cid = await generateRandomCID()
 
     await encStore.put(cid, data)
     expect(await encStore.has(cid)).toBe(true)
@@ -93,7 +93,7 @@ describe('EncBlockstore', () => {
     // Create multiple blocks
     for (let i = 0; i < 20; i++) {
       const data = new TextEncoder().encode(`Bulk data ${i}`)
-      const cid = await generateRandomCID() // Generate a random CID
+      const cid = await generateRandomCID()
       blocks.push({ cid, block: data })
     }
 
@@ -126,7 +126,7 @@ describe('EncBlockstore', () => {
     // Create multiple blocks
     for (let i = 0; i < 10; i++) {
       const data = new TextEncoder().encode(`Delete data ${i}`)
-      const cid = await generateRandomCID() // Generate a random CID
+      const cid = await generateRandomCID()
       blocks.push({ cid, block: data })
     }
 
@@ -163,7 +163,7 @@ describe('EncBlockstore', () => {
 
   it('should correctly report the existence of a key with has()', async () => {
     const data = new TextEncoder().encode('Existence check')
-    const cid = await generateRandomCID() // Generate a random CID
+    const cid = await generateRandomCID()
 
     expect(await encStore.has(cid)).toBe(false)
 
@@ -172,14 +172,14 @@ describe('EncBlockstore', () => {
   })
 
   it('should throw an error when getting a non-existent key', async () => {
-    const cid = await generateRandomCID() // Generate a random CID
+    const cid = await generateRandomCID()
 
     await expect(encStore.get(cid)).rejects.toThrow('Key not found')
   })
 
   it('should handle encryption and decryption correctly', async () => {
     const data = new TextEncoder().encode('Sensitive Data')
-    const cid = await generateRandomCID() // Generate a random CID
+    const cid = await generateRandomCID()
 
     await encStore.put(cid, data)
 
@@ -197,16 +197,31 @@ describe('EncBlockstore', () => {
 
   it('should handle incorrect password decryption attempts gracefully', async () => {
     const data = new TextEncoder().encode('Another Sensitive Data')
-    const cid = await generateRandomCID() // Generate a random CID
+    const cid = await generateRandomCID()
 
     await encStore.put(cid, data)
 
-    // Create a new EncBlockstore with a different master salt and password but the same underlying blockstore
-    const wrongMasterSalt = globalThis.crypto.getRandomValues(new Uint8Array(16)) // Different master salt
-    const wrongPassword = 'wrong-password'
+    // Create a new EncBlockstore with a different password but the same underlying blockstore
+    const wrongPassword = '🍤wrong-password🍤'
 
     const wrongPasswordStore = new EncBlockstore(mockStore)
-    await wrongPasswordStore.init(wrongPassword, wrongMasterSalt)
+    await wrongPasswordStore.init(wrongPassword, masterSalt)
+
+    // Attempt to decrypt with the wrong password and master salt
+    await expect(wrongPasswordStore.get(cid)).rejects.toThrow('Key not found')
+  })
+
+  it('should handle incorrect salt decryption attempts gracefully', async () => {
+    const data = new TextEncoder().encode('Another Sensitive Data')
+    const cid = await generateRandomCID()
+
+    await encStore.put(cid, data)
+
+    // Create a new EncBlockstore with a different master salt but the same underlying blockstore
+    const wrongMasterSalt = globalThis.crypto.getRandomValues(new Uint8Array(16)) // Different master salt
+
+    const wrongPasswordStore = new EncBlockstore(mockStore)
+    await wrongPasswordStore.init(password, wrongMasterSalt)
 
     // Attempt to decrypt with the wrong password and master salt
     await expect(wrongPasswordStore.get(cid)).rejects.toThrow('Key not found')
