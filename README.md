@@ -29,33 +29,21 @@ yarn add blockstore-enc
 ```js
 import { EncBlockstore } from 'blockstore-enc';
 import { FsBlockstore } from 'blockstore-fs';
-import fs from 'fs';
+import { CID } from 'multiformats/cid';
 
 (async () => {
   try {
     const password = 'strong-password-is-strong'; // Must be at least 16 bytes long
+    const masterSalt = new TextEncoder().encode('4d1A2eF42C9F09BF8ba6141D3dBA3521') // Must be at least 16 bytes long
 
-    // Generate or retrieve the master salt (must be at least 16 bytes)
-    // If initializing for the first time, generate and store this salt securely.
-    // If reopening an existing store, retrieve the salt from storage.
-    let masterSalt;
-
-    const saltFile = 'path/to/saltfile';
-
-    if (fs.existsSync(saltFile)) {
-      masterSalt = fs.readFileSync(saltFile);
-    } else {
-      masterSalt = crypto.getRandomValues(new Uint8Array(16));
-      fs.writeFileSync(saltFile, Buffer.from(masterSalt));
-    }
-
-    const store = new EncBlockstore(new FsBlockstore('path/to/store'));
+    const store = new EncBlockstore(new FsBlockstore('./data'));
     await store.init(password, masterSalt);
     await store.open();
 
     // Use the store as you would use any Blockstore
-    const someCid = /* your CID */;
-    const someData = /* your data as Uint8Array */;
+    const someCid = CID.parse('bafkreigh2akiscaildc6en5ynpwp45fucjk64o4uqa5fmsrzc4i4vqveae')
+    const someData = new Uint8Array([1, 2, 3, 4, 5]);
+
     await store.put(someCid, someData);
 
     const data = await store.get(someCid);
