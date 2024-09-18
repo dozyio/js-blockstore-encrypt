@@ -185,7 +185,8 @@ describe('EncBlockstore', () => {
     await encStore.put(cid, data)
 
     // Compute the storage CID
-    const storageCID = await encStore.computeStorageCID(cid)
+    // eslint-disable-next-line @typescript-eslint/dot-notation
+    const storageCID = await encStore['computeStorageCID'](cid)
 
     // Directly access the underlying store to ensure data is encrypted
     const storedData = await mockStore.get(storageCID)
