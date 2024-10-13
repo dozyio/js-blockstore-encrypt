@@ -36,8 +36,7 @@ import { CID } from 'multiformats/cid';
     const password = 'strong-password-is-strong'; // Must be at least 16 bytes long
     const masterSalt = new TextEncoder().encode('4d1A2eF42C9F09BF8ba6141D3dBA3521') // Must be at least 16 bytes long
 
-    const store = new EncBlockstore(new FsBlockstore('./data'));
-    await store.init(password, masterSalt);
+    const store = new EncBlockstore(password, masterSalt, new FsBlockstore('./data'));
     await store.open();
 
     // Use the store as you would use any Blockstore
@@ -61,29 +60,25 @@ import { CID } from 'multiformats/cid';
 #### Constructor
 
 ```js
-new EncBlockstore(blockstore: Blockstore, init?: EncBlockstoreInit)
+new EncBlockstore(password: string | Uint8Array, masterSalt: string | Uint8Array, blockstore: Blockstore, init?: EncBlockstoreInit)
 ```
 
 Creates a new instance of EncBlockstore wrapping the provided blockstore.
 
+* password: The password to derive the master key from. Must be at least 16 bytes long.
+* masterSalt: The master salt used for key derivation. Must be at least 16 bytes long.
 * blockstore: The underlying Blockstore to wrap.
 * init (optional): Initialization options.
 
 #### Methods
 
-```js
-init(password: string, masterSalt: Uint8Array): Promise<void>
-```
-
 Initializes the encryption and MAC keys. Must be called before using the blockstore.
-* password: The password to derive the master key from. Must be at least 16 bytes long.
-* masterSalt: The master salt used for key derivation. Must be at least 16 bytes long.
 
 ```js
 open(): Promise<void>
 ```
 
-Opens the underlying blockstore.
+Initializes the encryption and MAC keys and opens the underlying blockstore.
 
 ```js
 close(): Promise<void>

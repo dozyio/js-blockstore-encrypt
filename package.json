@@ -28,6 +28,7 @@
     }
   },
   "dependencies": {
+    "@noble/ciphers": "1.0.0",
     "it-map": "^3.1.1",
     "it-parallel-batch": "^3.0.6",
     "multiformats": "^13.2.3"
@@ -35,8 +36,11 @@
   "devDependencies": {
     "@types/node": "^22.5.5",
     "aegir": "^44.1.1",
+    "blockstore-core": "^5.0.2",
     "blockstore-fs": "^2.0.2",
+    "blockstore-level": "^2.0.1",
     "interface-blockstore": "^5.3.1",
+    "interface-blockstore-tests": "^7.0.1",
     "interface-store": "^6.0.2",
     "vitest": "^2.1.1"
   },
